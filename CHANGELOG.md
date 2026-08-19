@@ -16,3 +16,7 @@
   Fiber 完整状态机（PENDING/LOADING/ACTIVE/FAILED/DISPOSED/UNLOADING）、
   epoch 依赖刷新（服务上线自动装载 / 下线自动卸载 / 替换重载）、
   父子插件级联卸载（对应 cordis registry.ts / reflect.ts store 部分）
+- B3：Events 事件系统 —— `ctx.on/once`（随 fiber 卸载自动移除）、五种派发
+  （emit 广播 / parallel 并行聚合错误 / serial 串行短路 / bail 同步短路 /
+  waterfall 续延）、thisArg 过滤、internal/plugin 与 internal/service 内部事件
+  （对应 cordis events.ts）
