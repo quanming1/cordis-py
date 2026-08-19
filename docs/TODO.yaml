@@ -8,7 +8,7 @@ stages:
     steps:
       - id: A1
         title: Rondo 规范资产 + Python 工程基建
-        status: in_progress
+        status: done
         prd: docs/prd/PRD-A1-foundation.md
         acceptance: pytest 冒烟通过；ruff 通过；commit-msg 实测拒绝非法提交；PR 合入 develop
 
