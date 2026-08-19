@@ -92,7 +92,8 @@ def _dispatch_effect(
 
         async def gather_await() -> None:
             dispose = await result
-            collect(dispose)
+            if dispose is not None:
+                collect(dispose)
 
         return loop.create_task(gather_await())
     if isinstance(result, AsyncIterator):
@@ -181,14 +182,23 @@ class EffectHandle:
         self._disposables: list[Disposable] = []
         self._setup_task: asyncio.Task[None] | None = None
         self._active = True  # 幂等门闩（对齐 TS runner.epoch）
+        self._meta: dict = {"label": label, "children": []}  # effect 元数据树（E1）
 
     def __repr__(self) -> str:
         state = "active" if self._active else "disposed"
         return f"<EffectHandle {self.label!r} {state}>"
 
     def _safe_collect(self, dispose: Any) -> None:
-        """收集单个清理函数；None 跳过；其余类型抛 TypeError（对齐 safeCollect）。"""
+        """收集单个清理函数；None 跳过；嵌套 handle 记入 children；
+        其余类型抛 TypeError（对齐 safeCollect）。"""
         if dispose is None:
+            return
+        if isinstance(dispose, EffectHandle):
+            # 嵌套 effect：进入元数据树，其句柄本身也作为清理函数收集，
+            # 并从 fiber 顶层列表移除（对齐 TS：collect 时 delete 顶层）
+            self._meta["children"].append(dispose._meta)
+            self._disposables.append(dispose)
+            self._fiber._disposables.delete(dispose)
             return
         if not callable(dispose):
             raise TypeError(f"Invalid effect: {dispose!r} 不是可调用的清理函数")
@@ -267,7 +277,10 @@ class EffectHandle:
         return _run_serial(items, self._fiber.logger, self.label)
 
     def __call__(self) -> Awaitable[None] | None:
-        """触发清理（幂等）：先等建立 task 完成（若失败则跳过），再串行清理。"""
+        """触发清理（幂等）：先等建立 task 完成（若失败则跳过），再串行清理。
+
+        清理过程抛错不向外传播——记入日志（对齐 fiber.spec 'dispose error'）。
+        """
         if not self._active:
             return None
         self._active = False
@@ -277,8 +290,25 @@ class EffectHandle:
             if loop is None:
                 self._run_dispose_chain()
                 return None
-            return loop.create_task(self._wait_then_dispose())
-        return self._run_dispose_chain()
+            return self._guarded(loop, self._wait_then_dispose())
+        raw = self._run_dispose_chain()
+        if raw is None:
+            return None
+        loop = _try_running_loop()
+        if loop is None:
+            return None
+        return self._guarded(loop, raw)
+
+    def _guarded(self, loop: asyncio.AbstractEventLoop, coro: Awaitable[None]) -> asyncio.Task:
+        """包装清理协程：异常记日志而非传播（对齐 TS composeError 的清理路径）。"""
+
+        async def guarded() -> None:
+            try:
+                await coro
+            except BaseException as error:
+                self._fiber.logger.error("effect %r 清理失败：%s", self.label, error)
+
+        return loop.create_task(guarded())
 
     async def _wait_then_dispose(self) -> None:
         task = self._setup_task
@@ -287,7 +317,9 @@ class EffectHandle:
             await task
         except BaseException:
             return
-        self._run_dispose_chain()
+        raw = self._run_dispose_chain()
+        if raw is not None:
+            await raw
 
     def __await__(self):
         return self._wait_setup().__await__()
@@ -408,10 +440,11 @@ class Fiber:
         return self._unload_callback
 
     def _unload_callback(self) -> Any:
-        """生命周期 effect 的清理体：同步拆除 + 等待卸载惯性。
+        """生命周期 effect 的清理体：同步拆除 + 排干全部卸载惯性。
 
         拆除（uid 置空 / runtime 移除 / 触发卸载）是同步的，保证无事件循环
-        环境下也能完成；仅当有循环把卸载异步化为 task 时返回等待项。
+        环境下也能完成；卸载会依次经历 reload→unload 链，此处循环等待
+        直到状态机静止（对齐 TS ``while (this.inertia) await this.inertia``）。
         """
         assert self.runtime is not None
         assert self._remove_runtime is not None
@@ -423,9 +456,17 @@ class Fiber:
             if not len(self.runtime.fibers):
                 self.ctx.registry.delete(self.runtime.callback)
         self._set_epoch(INACTIVE)
-        inertia = self._inertia
-        self._inertia = None
-        return inertia
+
+        async def drain() -> None:
+            while self._inertia is not None:
+                task = self._inertia
+                await task
+            return None
+
+        # 无进行中的惯性（含同步回退路径）→ 立即完成
+        if self._inertia is None:
+            return None
+        return drain()
 
     def _start_load_sync(self) -> None:
         """无事件循环的同步装载（仅支持同步插件）。"""
@@ -435,8 +476,20 @@ class Fiber:
             raise RuntimeError("expected synchronous load path outside event loop")
         if inspect.isclass(self.runtime.callback):
             self._instance = self.runtime.callback(self.ctx, self.config)
+            if hasattr(self._instance, "init"):
+                result = self._instance.init()
+                self._start_sync_collect(result)
             return
         result = self.runtime.callback(self.ctx, self.config)
+        if inspect.isawaitable(result) or isinstance(result, AsyncIterator):
+            close = getattr(result, "close", None)
+            if close is not None:
+                close()
+            raise RuntimeError("async plugin requires a running event loop")
+        self._start_sync_collect(result)
+
+    def _start_sync_collect(self, result: Any) -> None:
+        """同步路径的形态收集（awaitable/async-iter 形态在同步装载中禁止）。"""
         if inspect.isawaitable(result) or isinstance(result, AsyncIterator):
             close = getattr(result, "close", None)
             if close is not None:
@@ -445,10 +498,17 @@ class Fiber:
         _dispatch_effect(result, self._disposables.push, self._is_active)
 
     async def _start_load(self) -> None:
-        """事件循环内的异步装载：执行回调并等待其异步建立完成。"""
+        """事件循环内的异步装载：执行回调（含类 init）并等待异步建立完成。"""
         assert self.runtime is not None
         if inspect.isclass(self.runtime.callback):
             self._instance = self.runtime.callback(self.ctx, self.config)
+            if hasattr(self._instance, "init"):
+                # 类插件 init()：返回值经形态派发收集（可异步阻塞装载，
+                # 对齐 TS Service.init 的 pending inject 语义）
+                result = self._instance.init()
+                task = _dispatch_effect(result, self._disposables.push, self._is_active)
+                if task is not None:
+                    await task
             return
         result = self.runtime.callback(self.ctx, self.config)
         task = _dispatch_effect(result, self._disposables.push, self._is_active)
@@ -492,6 +552,9 @@ class Fiber:
         if self._inertia is not None:
             return
         if epoch != INACTIVE and old == INACTIVE:
+            # 记录装载发起时的基准（供 reload tail 判定；TS 在 reload 首个
+            # await 前同步捕获，task 运行时捕获会被拆线污染）
+            self._reload_basis = epoch
             self._update_state(FiberState.LOADING)
             self._start_transition(self._reload())
         else:
@@ -541,7 +604,7 @@ class Fiber:
 
     async def _reload(self) -> None:
         """依赖就绪：装载插件并进入 ACTIVE（或根据新 epoch 转 UNLOADING）。"""
-        old_epoch = self._runner_epoch
+        old_epoch = getattr(self, "_reload_basis", self._runner_epoch)
         try:
             self.store = dict(self._store)
             await self._start_load()
@@ -609,11 +672,39 @@ class Fiber:
     def __await__(self):
         return self.await_().__await__()
 
+    def getEffects(self) -> list[dict]:
+        """效果元数据森林（对齐 TS ``fiber.getEffects()``，供调试与快照）。
+
+        每个已收集 effect 句柄输出 ``{"label", "children"}``，嵌套 effect
+        进入父级 children。
+        """
+        return [handle._meta for handle in self._disposables if hasattr(handle, "_meta")]
+
+    async def restart(self) -> None:
+        """卸载全部副作用后按当前 config 重载（对齐 TS ``fiber.restart()``）。"""
+        if self.runtime is None:
+            raise RuntimeError("root fiber cannot restart")
+        self.assert_active()
+        self._set_epoch(INACTIVE)
+        await self.await_()  # 等卸载完成（若本已 PENDING 则立即返回）
+        self._refresh()  # 依赖仍在 → 重新装载
+        await self.await_()
+
+    def update(self, config: Any) -> Awaitable[None]:
+        """热更新配置并重启（对齐 TS ``fiber.update(config)``；await 等待完成）。"""
+        if self.runtime is None:
+            raise RuntimeError("root fiber cannot update")
+        self.assert_active()
+        self.config = resolve_config(self.runtime, config)
+        self._error = None
+        return self.restart()
+
     def dispose(self) -> Awaitable[None] | None:
         """整体销毁 fiber。
 
         - 插件实例：触发生命周期 effect（从 runtime 拆线 + 清空副作用）
-        - root：清空全部 effect（子插件级联卸载），随后应用不可复用
+        - root：清空全部 effect（子插件级联卸载）；uid 保持 0，可继续使用
+          （对齐 plugin.spec 'root dispose'）
         """
         if self.uid is None:
             return None
@@ -624,8 +715,9 @@ class Fiber:
             task = handle()
             if task is not None:
                 tasks.append(task)
-        self.uid = None
-        self.state = FiberState.DISPOSED
+        # root 语义：uid 保持 0（TS root 可 restart）；仅清空效果
+        self.uid = 0
+        self.state = FiberState.ACTIVE
         if len(tasks) == 1:
             return tasks[0]
         if len(tasks) > 1:

@@ -64,6 +64,6 @@ stages:
     steps:
       - id: E1
         title: 移植原仓库 core 测试套件并全绿
-        status: todo
+        status: done
         prd: docs/prd/PRD-E1-parity.md
         acceptance: 对照 cordis@4.0.0-rc 的 core/tests 移植用例全部通过

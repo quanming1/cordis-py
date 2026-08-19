@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 import pytest
 
@@ -261,12 +262,25 @@ def test_handle_idempotent() -> None:
 
 
 def test_inactive_fiber_rejects_effect() -> None:
-    ctx = Context()
-    ctx.fiber.dispose()
-    assert ctx.fiber.state is FiberState.DISPOSED
-    with pytest.raises(CordisError) as exc_info:
-        ctx.effect(lambda: None)
-    assert exc_info.value.code == "INACTIVE_EFFECT"
+    # 对齐 TS：root fiber 可复用（dispose 后 uid 保持 0）；实例 fiber 拆线后不可用
+    async def main() -> None:
+        ctx = Context()
+
+        def plugin(plugin_ctx: Any, config: Any):
+            return None
+
+        fiber = ctx.plugin(plugin)
+        await fiber
+        assert fiber.state is FiberState.ACTIVE
+        task = fiber.dispose()
+        if task is not None:
+            await task
+        assert fiber.uid is None
+        with pytest.raises(CordisError) as exc_info:
+            fiber.effect(lambda: None)
+        assert exc_info.value.code == "INACTIVE_EFFECT"
+
+    asyncio.run(main())
 
 
 # ── Fiber 统一清理 ───────────────────────────────────────────

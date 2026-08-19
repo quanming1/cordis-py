@@ -72,7 +72,7 @@ class Context:
         return True
 
     def __repr__(self) -> str:
-        return f"<Context fiber={self.fiber.name!r}>"
+        return f"Context <{self.fiber.name}>"
 
     def child_context(self, fiber: Fiber) -> Context:
         """为插件 fiber 创建共享 root 服务的子上下文。"""
