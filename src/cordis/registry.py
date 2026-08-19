@@ -139,9 +139,11 @@ class RegistryService:
 
         runtime = self._internal.get(callback)
         if not runtime:
-            name = plugin.get("name") if isinstance(plugin, dict) else getattr(
-                plugin, "name", None
-            )
+            if isinstance(plugin, dict):
+                name = plugin.get("name")
+            else:
+                # 函数插件取 __name__（TS 是 fn.name，Python 属性为 __name__）
+                name = getattr(plugin, "name", None) or getattr(plugin, "__name__", None)
             validator = getattr(plugin, "Config", None)
             runtime = PluginRuntime(name=name, callback=callback, config_validator=validator)
             self._internal[callback] = runtime

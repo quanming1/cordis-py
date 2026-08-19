@@ -7,12 +7,12 @@
 """
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from typing import Any
 
 from .events import EventsService
 from .fiber import Effect, EffectHandle, Fiber
+from .logger import Logger
 from .reflect import ReflectService
 from .registry import RegistryService
 
@@ -33,7 +33,7 @@ class Context:
             # 根上下文
             self.root = self
             self.fiber = Fiber(self)
-            self.logger = logging.getLogger(f"cordis.{self.fiber.name}")
+            self.logger = Logger(self.fiber.name)
             self.reflect = ReflectService(self)
             self.registry = RegistryService(self)
             self.events = EventsService(self)
@@ -43,7 +43,7 @@ class Context:
             assert base is not None
             self.root = base
             self.fiber = fiber
-            self.logger = logging.getLogger(f"cordis.{fiber.name}")
+            self.logger = Logger(fiber.name)
             self.reflect = base.reflect
             self.registry = base.registry
             self.events = base.events
