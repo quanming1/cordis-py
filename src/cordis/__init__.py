@@ -3,7 +3,7 @@
 移植自 https://github.com/cordiverse/cordis （TypeScript）。
 核心语义：可撤销副作用（时间维度）+ 响应式依赖注入（空间维度）。
 
-当前进度：B2（Registry + 插件生命周期 + epoch 依赖刷新），见 docs/TODO.yaml。
+当前版本：0.4.0。功能进度与验收记录见 docs/TODO.yaml。
 """
 from .context import Context
 from .disposable import DisposableList

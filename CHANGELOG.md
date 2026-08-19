@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-19
+
 ### Added
 - A1：Rondo 规范资产（AGENTS.md / TODO.yaml / PROCESS.md / PRD 模板 / Git Hooks）与 Python 工程基建
 - B1：Effect 机制 —— `DisposableList`、`Fiber.effect()` 四形态（清理函数 / None /

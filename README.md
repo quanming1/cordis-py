@@ -2,7 +2,8 @@
 
 [Cordis](https://github.com/cordiverse/cordis) 的 Python 移植 —— 时空可组合性（Spatiotemporal Composability）元框架。
 
-> 本项目处于早期开发阶段，API 尚未稳定。
+> 当前发布版本：0.4.0。核心语义已完成对 Cordis `core` 的对标验收；作为
+> 0.x 版本，公共 API 在后续迭代中仍可能调整。
 
 ## 设计理念
 
