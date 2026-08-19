@@ -1,0 +1,3 @@
+#!/bin/sh
+# 提交信息校验包装（Rondo 方法）
+python "$(dirname "$0")/check_commit_msg.py" "$1"

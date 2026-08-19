@@ -1,0 +1,69 @@
+# cordis-py 任务清单（Rondo 方法：唯一执行依据）
+# 状态：todo / in_progress / done
+# 提交规范：<type>(<scope>): <subject>，scope 必须是下面真实存在的步骤 id
+
+stages:
+  - id: A
+    name: 地基
+    steps:
+      - id: A1
+        title: Rondo 规范资产 + Python 工程基建
+        status: done
+        prd: docs/prd/PRD-A1-foundation.md
+        acceptance: pytest 冒烟通过；ruff 通过；commit-msg 实测拒绝非法提交；PR 合入 develop
+
+  - id: B
+    name: 最小内核（时间维度：可撤销副作用）
+    steps:
+      - id: B1
+        title: Effect 机制（DisposableList + 四形态 + 最小 Fiber 骨架）
+        status: done
+        prd: docs/prd/PRD-B1-effect.md
+        acceptance: pytest 全绿（四形态清理顺序/失败级联清理）
+      - id: B2
+        title: Registry + Fiber 完整状态机（plugin 注册/epoch 依赖刷新）
+        status: done
+        prd: docs/prd/PRD-B2-registry.md
+        acceptance: pytest 全绿（插件装载/卸载回滚/依赖变化重载）
+      - id: B3
+        title: Events 事件系统（emit/on/once + 五种派发模式）
+        status: done
+        prd: docs/prd/PRD-B3-events.md
+        acceptance: pytest 全绿（五种派发语义与监听器随 effect 清理）
+
+  - id: C
+    name: 空间维度（响应式依赖注入）
+    steps:
+      - id: C1
+        title: Reflect 服务注册 + isolate 隔离
+        status: done
+        prd: docs/prd/PRD-C1-reflect.md
+        acceptance: pytest 全绿（服务提供/查找/同名隔离）
+      - id: C2
+        title: intercept 配置拦截 + 声明式注入联动
+        status: done
+        prd: docs/prd/PRD-C2-intercept.md
+        acceptance: pytest 全绿（注入配置合并/服务上线自动装载）
+
+  - id: D
+    name: Service 体系
+    steps:
+      - id: D1
+        title: Service 基类 + 装饰器注入
+        status: done
+        prd: docs/prd/PRD-D1-service.md
+        acceptance: pytest 全绿（Service 生命周期/注入装饰器）
+      - id: D2
+        title: logger 日志服务
+        status: done
+        prd: docs/prd/PRD-D2-logger.md
+        acceptance: pytest 全绿（日志级别/格式/作用域）
+
+  - id: E
+    name: 对标验收
+    steps:
+      - id: E1
+        title: 移植原仓库 core 测试套件并全绿
+        status: done
+        prd: docs/prd/PRD-E1-parity.md
+        acceptance: 对照 cordis@4.0.0-rc 的 core/tests 移植用例全部通过

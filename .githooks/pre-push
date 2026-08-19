@@ -1,0 +1,3 @@
+#!/bin/sh
+# 推送保护包装（Rondo 方法全 PR 流）
+python "$(dirname "$0")/check_push.py"

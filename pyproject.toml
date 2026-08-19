@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cordis-py"
-version = "0.1.0"
+version = "0.4.0"
 description = "Cordis 的 Python 移植 —— 时空可组合性元框架"
 readme = "README.md"
 license = { text = "MIT" }
@@ -23,6 +23,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
