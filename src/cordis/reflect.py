@@ -140,4 +140,10 @@ class ReflectService:
                     continue
                 fiber._refresh()
                 affected.append(fiber)
+        # internal/service 事件（对齐 TS notify：对每个受影响服务广播）
+        for name in names:
+            impl = self._get_impl(name, strict=False)
+            self.ctx.events.emit(
+                self.ctx, "internal/service", name, impl.value if impl else None
+            )
         return affected

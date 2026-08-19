@@ -27,7 +27,7 @@ stages:
         acceptance: pytest 全绿（插件装载/卸载回滚/依赖变化重载）
       - id: B3
         title: Events 事件系统（emit/on/once + 五种派发模式）
-        status: todo
+        status: done
         prd: docs/prd/PRD-B3-events.md
         acceptance: pytest 全绿（五种派发语义与监听器随 effect 清理）
 

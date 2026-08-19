@@ -331,6 +331,8 @@ class Fiber:
             self.logger = logging.getLogger(f"cordis.{self.name}")
             # 子上下文：共享 root 的服务表与注册表
             self.ctx = parent.child_context(self)
+            # 构造即宣告插件实例（对齐 TS Fiber 构造里的 internal/plugin 事件）
+            self.ctx.emit("internal/plugin", self)
             # 装载前先按声明检查依赖（对齐 TS 构造里的 _checkImpl 循环）
             for name in self.inject:
                 self._check_impl(name)
@@ -409,6 +411,8 @@ class Fiber:
         assert self.runtime is not None
         assert self._remove_runtime is not None
         self.uid = None
+        # 宣告插件实例销毁（对齐 TS 卸载时的 internal/plugin 事件）
+        self.ctx.emit("internal/plugin", self)
         if self.ctx.registry.has(self.runtime.callback):
             self._remove_runtime()
             if not len(self.runtime.fibers):
