@@ -41,7 +41,7 @@ stages:
         acceptance: pytest 全绿（服务提供/查找/同名隔离）
       - id: C2
         title: intercept 配置拦截 + 声明式注入联动
-        status: todo
+        status: done
         prd: docs/prd/PRD-C2-intercept.md
         acceptance: pytest 全绿（注入配置合并/服务上线自动装载）
 

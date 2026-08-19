@@ -23,3 +23,7 @@
 - C1：Reflect 完整版 —— isolate 隔离键（同名服务按上下文解析不同实例）、
   `ctx.database` 属性访问（`__getattr__`/`__setattr__` 服务风格）、
   internal/service 广播按隔离域过滤（对应 cordis reflect.ts / context.ts）
+- C2：intercept 配置拦截 —— `ctx.intercept(name, config)` 拦截链继承/覆盖、
+  inject 声明配置写入插件拦截链、`service_config` 合并（base → 链 → head，
+  支持 `Config.merge` 自定义）（对应 cordis context.ts / service.ts 的
+  resolveConfig）

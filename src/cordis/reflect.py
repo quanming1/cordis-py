@@ -149,6 +149,41 @@ class ReflectService:
 
     # ── 依赖刷新 ─────────────────────────────────────────────
 
+    def service_config(self, name: str, *, base: Any = None, head: Any = None, ctx=None) -> Any:
+        """读取合并后的服务配置（对齐 TS ``Service.resolveConfig``）。
+
+        合并顺序：base → 调用 ctx 拦截链上的全部 ``name`` 配置 → head
+        （后者覆盖前者）。若服务实现已提供 ``Config.merge`` 则调用之，
+        否则按浅合并（``{**a, **b}`` 语义；非 dict 配置整体替换）。
+        """
+        ctx = ctx or self.ctx
+        configs: list[Any] = []
+        if base is not None:
+            configs.append(base)
+        configs.extend(ctx._collect_intercept(name))
+        if head is not None:
+            configs.append(head)
+        if not configs:
+            return {}
+
+        # 自定义 merge：优先服务实现的 Config.merge（D1 Service 提供）
+        impl = self._get_impl(name, strict=False, ctx=ctx)
+        merge_fn: Callable | None = None
+        if impl is not None:
+            svc_config = getattr(impl.value, "Config", None)
+            if svc_config is not None:
+                merge_fn = getattr(svc_config, "merge", None)
+
+        if merge_fn is not None:
+            return merge_fn(*configs)
+        merged: Any = {}
+        for config in configs:
+            if isinstance(config, dict):
+                merged.update(config)
+            else:
+                merged = config
+        return merged
+
     def notify(self, names: list[str], *, ctx=None) -> list[Fiber]:
         """通知所有声明了受影响服务的 fiber，刷新其依赖并收集需重载者。
 
