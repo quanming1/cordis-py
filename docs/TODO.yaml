@@ -22,7 +22,7 @@ stages:
         acceptance: pytest 全绿（四形态清理顺序/失败级联清理）
       - id: B2
         title: Registry + Fiber 完整状态机（plugin 注册/epoch 依赖刷新）
-        status: todo
+        status: done
         prd: docs/prd/PRD-B2-registry.md
         acceptance: pytest 全绿（插件装载/卸载回滚/依赖变化重载）
       - id: B3

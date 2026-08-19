@@ -9,7 +9,7 @@ import logging
 
 import pytest
 
-from cordis import Context, CordisError, EffectHandle, Fiber, FiberState
+from cordis import Context, CordisError, EffectHandle, FiberState
 
 
 async def settle(steps: int = 4) -> None:
@@ -378,9 +378,8 @@ def test_mixed_sync_async_cleanup_chain() -> None:
 
 
 def test_context_effect_delegates_to_fiber() -> None:
-    fiber = Fiber(name="app")
-    ctx = Context(fiber=fiber)
-    assert ctx.fiber is fiber
+    ctx = Context()
+    assert ctx.fiber.name == "root"
     order: list[str] = []
     ctx.effect(lambda: lambda: order.append("done"), "via-ctx")
     ctx.dispose()
