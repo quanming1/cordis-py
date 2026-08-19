@@ -50,7 +50,7 @@ stages:
     steps:
       - id: D1
         title: Service 基类 + 装饰器注入
-        status: todo
+        status: done
         prd: docs/prd/PRD-D1-service.md
         acceptance: pytest 全绿（Service 生命周期/注入装饰器）
       - id: D2

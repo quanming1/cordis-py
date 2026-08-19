@@ -18,6 +18,31 @@ if TYPE_CHECKING:
     from .context import Context as ContextType
 
 
+def Inject(name: str, config: Any = None) -> Callable:
+    """声明式依赖注入装饰器（对应 cordis registry.ts 的 ``@Inject``）。
+
+    用法（类与函数插件均可）：:
+
+        @Inject("database", {"host": "db"})
+        def plugin(ctx, config): ...
+
+        @Inject("database")
+        class Plugin: ...
+
+    类装饰器写入 ``cls.inject``（子类自动继承父类声明并浅拷贝独立）；
+    函数装饰器附加 ``fn.inject`` 属性。插件装载时按 ``inject`` 声明解析
+    依赖与拦截配置。
+    """
+
+    def decorator(target: Any) -> Any:
+        inject = dict(getattr(target, "inject", None) or {})
+        inject[name] = config
+        target.inject = inject
+        return target
+
+    return decorator
+
+
 @dataclass
 class PluginRuntime:
     """一个插件的运行时元信息（同一插件所有实例共享）。"""

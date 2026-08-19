@@ -27,3 +27,6 @@
   inject 声明配置写入插件拦截链、`service_config` 合并（base → 链 → head，
   支持 `Config.merge` 自定义）（对应 cordis context.ts / service.ts 的
   resolveConfig）
+- D1：Service 体系 —— `Service` 基类（构造即自动提供、随提供者 fiber 上下线、
+  `check` 谓词 / `Config.merge` / callable 服务）、`@Inject` 装饰器
+  （类继承 + 函数，声明式依赖书写）（对应 cordis service.ts / registry.ts）
