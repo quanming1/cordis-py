@@ -17,7 +17,7 @@ stages:
     steps:
       - id: B1
         title: Effect 机制（DisposableList + 四形态 + 最小 Fiber 骨架）
-        status: todo
+        status: done
         prd: docs/prd/PRD-B1-effect.md
         acceptance: pytest 全绿（四形态清理顺序/失败级联清理）
       - id: B2

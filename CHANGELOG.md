@@ -9,3 +9,6 @@
 
 ### Added
 - A1：Rondo 规范资产（AGENTS.md / TODO.yaml / PROCESS.md / PRD 模板 / Git Hooks）与 Python 工程基建
+- B1：Effect 机制 —— `DisposableList`、`Fiber.effect()` 四形态（清理函数 / None /
+  awaitable / 同步与异步生成器）、LIFO 串行清理、失败级联清理、幂等句柄、
+  最小 `Fiber`/`Context` 骨架（对应 cordis fiber.ts 的 Effect 部分）
