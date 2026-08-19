@@ -137,21 +137,25 @@ class RegistryService:
             )
         ctx.fiber.assert_active()
 
+        if isinstance(plugin, dict):
+            name = plugin.get("name")
+            inject = plugin.get("inject")
+            validator = plugin.get("Config")
+        else:
+            # 函数插件取 __name__（TS 是 fn.name，Python 属性为 __name__）
+            name = getattr(plugin, "name", None) or getattr(plugin, "__name__", None)
+            inject = getattr(plugin, "inject", None)
+            validator = getattr(plugin, "Config", None)
+
         runtime = self._internal.get(callback)
         if not runtime:
-            if isinstance(plugin, dict):
-                name = plugin.get("name")
-            else:
-                # 函数插件取 __name__（TS 是 fn.name，Python 属性为 __name__）
-                name = getattr(plugin, "name", None) or getattr(plugin, "__name__", None)
-            validator = getattr(plugin, "Config", None)
             runtime = PluginRuntime(name=name, callback=callback, config_validator=validator)
             self._internal[callback] = runtime
 
         return Fiber(
             ctx,
             config=config,
-            inject=resolve_inject(getattr(plugin, "inject", None)),
+            inject=resolve_inject(inject),
             runtime=runtime,
         )
 

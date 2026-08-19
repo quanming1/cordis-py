@@ -33,3 +33,8 @@
 - D2：logger 日志服务 —— `Logger` 作用域包装（root / 插件 fiber 名 / child
   派生、等级控制、success/trace/fatal 方法映射），基于标准库 logging
   （对应 cordis logger.ts 核心层）
+- E1：对标验收 —— 通读 cordis core/tests 全部 12 个 spec 并补齐缺口：
+  `getEffects` 元数据树、类插件 `init()` 生命周期（异步阻塞装载）、
+  `fiber.restart/update` 热更新、清理错误容错（记日志不传播）、
+  root dispose 语义（uid 保持 0 可复用）、`repr` 对齐；
+  新增逐用例映射的 `test_parity.py`（17 项）
