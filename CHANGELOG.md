@@ -20,3 +20,6 @@
   （emit 广播 / parallel 并行聚合错误 / serial 串行短路 / bail 同步短路 /
   waterfall 续延）、thisArg 过滤、internal/plugin 与 internal/service 内部事件
   （对应 cordis events.ts）
+- C1：Reflect 完整版 —— isolate 隔离键（同名服务按上下文解析不同实例）、
+  `ctx.database` 属性访问（`__getattr__`/`__setattr__` 服务风格）、
+  internal/service 广播按隔离域过滤（对应 cordis reflect.ts / context.ts）
