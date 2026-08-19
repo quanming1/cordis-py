@@ -331,6 +331,11 @@ class Fiber:
             self.logger = logging.getLogger(f"cordis.{self.name}")
             # 子上下文：共享 root 的服务表与注册表
             self.ctx = parent.child_context(self)
+            # inject 声明的配置写入本插件的拦截链（对齐 TS Fiber 构造，
+            # 仅在带配置时拷贝替换，避免污染父链）
+            injected = {n: c for n, c in self.inject.items() if c is not None}
+            if injected:
+                self.ctx._intercept = {**self.ctx._intercept, **injected}
             # 构造即宣告插件实例（对齐 TS Fiber 构造里的 internal/plugin 事件）
             self.ctx.emit("internal/plugin", self)
             # 装载前先按声明检查依赖（对齐 TS 构造里的 _checkImpl 循环）

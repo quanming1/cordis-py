@@ -52,6 +52,9 @@ class Context:
         self._isolate: dict[str, object] = (
             parent._isolate if parent is not None else {}
         )
+        # 拦截链：name → config（intercept() 时拷贝替换）；_intercept_parent 指向父 ctx
+        self._intercept: dict[str, Any] = parent._intercept if parent is not None else {}
+        self._intercept_parent: Context | None = parent
         # thisArg 过滤钩子（None 时按 isolate 一致性派生）
         self.event_filter: Callable[[Context], bool] | None = None
 
@@ -94,7 +97,45 @@ class Context:
         mapped = dict(self._isolate)
         mapped[name] = label if label is not None else object()
         ctx._isolate = mapped
+        ctx._intercept = self._intercept
+        ctx._intercept_parent = self
         return ctx
+
+    # ── 配置拦截（C2）────────────────────────────────────────
+
+    def intercept(self, name: str, config: Any) -> Context:
+        """返回配置拦截上下文：本范围内名为 ``name`` 的服务以 ``config`` 实例化。
+
+        拦截链继承当前 ctx 并对 ``name`` 覆盖配置（对齐 TS ``Object.create`` 遮蔽）。
+        """
+        ctx = object.__new__(Context)
+        ctx.root = self.root
+        ctx.fiber = self.fiber
+        ctx.logger = self.logger
+        ctx.reflect = self.reflect
+        ctx.registry = self.registry
+        ctx.events = self.events
+        ctx.event_filter = None
+        ctx._isolate = self._isolate
+        mapped = dict(self._intercept)
+        mapped[name] = config
+        ctx._intercept = mapped
+        ctx._intercept_parent = self
+        return ctx
+
+    def _collect_intercept(self, name: str) -> list[Any]:
+        """沿拦截链收集 ``name`` 的全部配置（祖先在前，最近声明在后）。"""
+        chain: list[Any] = []
+        ctx: Context | None = self
+        while ctx is not None:
+            if name in ctx._intercept:
+                chain.insert(0, ctx._intercept[name])
+            ctx = ctx._intercept_parent
+        return chain
+
+    def service_config(self, name: str, *, base: Any = None, head: Any = None) -> Any:
+        """读取合并后的服务配置（base → 拦截链 → head，后者覆盖前者）。"""
+        return self.reflect.service_config(name, base=base, head=head, ctx=self)
 
     # ── 属性访问（服务风格）─────────────────────────────────
 
