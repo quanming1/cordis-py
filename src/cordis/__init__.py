@@ -8,9 +8,10 @@
 from .context import Context
 from .disposable import DisposableList
 from .fiber import CordisError, Disposable, Effect, EffectHandle, Fiber, FiberState
-from .registry import RegistryService
+from .registry import Inject, RegistryService
+from .service import Service
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "Context",
@@ -21,5 +22,7 @@ __all__ = [
     "EffectHandle",
     "Fiber",
     "FiberState",
+    "Inject",
     "RegistryService",
+    "Service",
 ]
