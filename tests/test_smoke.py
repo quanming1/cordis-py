@@ -4,7 +4,7 @@
 def test_import() -> None:
     import cordis
 
-    assert cordis.__version__ == "0.2.0"
+    assert cordis.__version__ == "0.3.0"
 
 
 def test_package_metadata() -> None:

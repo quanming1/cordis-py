@@ -36,7 +36,7 @@ stages:
     steps:
       - id: C1
         title: Reflect 服务注册 + isolate 隔离
-        status: todo
+        status: done
         prd: docs/prd/PRD-C1-reflect.md
         acceptance: pytest 全绿（服务提供/查找/同名隔离）
       - id: C2

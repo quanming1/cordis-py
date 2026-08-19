@@ -453,8 +453,8 @@ class Fiber:
     # ── 状态机 ──────────────────────────────────────────────
 
     def _check_impl(self, name: str) -> None:
-        """按依赖声明检查名为 name 的服务是否可用，更新 _store。"""
-        impl = self.ctx.reflect._get_impl(name)
+        """按依赖声明检查名为 name 的服务是否可用（按本 fiber ctx 的隔离键），更新 _store。"""
+        impl = self.ctx.reflect._get_impl(name, ctx=self.ctx)
         if not impl:
             self._store.pop(name, None)
             return
@@ -585,9 +585,11 @@ class Fiber:
         # 状态在 ACTIVE ↔ 非 ACTIVE 间变化时，通知依赖本 fiber 服务的插件
         if old is not FiberState.ACTIVE and self.state is not FiberState.ACTIVE:
             return
-        for name, impl in list(self.ctx.reflect.store.items()):
-            if impl.fiber is self:
-                self.ctx.reflect.notify([name])
+        for name, by_key in self.ctx.reflect.store.items():
+            for impl in by_key.values():
+                if impl.fiber is self:
+                    self.ctx.reflect.notify([name])
+                    break
 
     # ── 对外接口 ────────────────────────────────────────────
 
